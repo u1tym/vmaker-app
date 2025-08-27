@@ -3,14 +3,16 @@
         <div class="elem-all">
             <div class="elem-top">
                 <div ref="ref_tl"></div>
-                <div ref="ref_tr"></div>
+                <div class="elem-top-right">
+                    <div ref="ref_tra"></div>
+                </div>
             </div>
             <div class="elem-bottom" ref="ref_b">
                 <div class="elem-left">
-                    <div ref="ref_bl"></div>
+                    <div ref="ref_bla"></div>
                 </div>
                 <div class="elem-right">
-                    <div ref="ref_br" ></div>
+                    <div ref="ref_bra" ></div>
                 </div>
             </div>
         </div>
@@ -35,6 +37,14 @@
     height: 100px;
 }
 
+.elem-top > div:first-child {
+    flex-shrink: 0; /* 幅を固定 */
+}
+.elem-top-right {
+    overflow-x: scroll;
+    flex: 1; /* 残りのスペースを占有 */
+    scrollbar-width: none;
+}
 .elem-bottom {
     display: flex;
     flex-direction: row;
@@ -82,10 +92,12 @@ import { ref, onMounted } from 'vue'
 import * as d3 from 'd3'
 
 interface TFConfig {
-
-    hour_h: number
-    hour_w: number
-    day_w: number
+    header_h: number // ヘッダーの高さ
+    allday_h: number // 終日欄の高さ
+    hour_h: number  // 1時間の高さ
+    
+    hour_w: number  // 時間欄の幅
+    day_w: number   // 日毎欄の幅
 }
 
 const rstr = (l: number): string => {
@@ -97,15 +109,21 @@ const rstr = (l: number): string => {
 
 const ref_tl = ref(null)
 const ref_tr = ref(null)
+const ref_tra = ref(null)
 const ref_bl = ref(null)
+const ref_bla = ref(null)
 const ref_br = ref(null)
+const ref_bra = ref(null)
 const ref_b = ref(null)
 
 const key = rstr(8)
 const keyTL = "tl_" + key
 const keyTR = "tr_" + key
+const keyTRA = "tra_" + key
 const keyBL = "bl_" + key
+const keyBLA = "bla_" + key
 const keyBR = "br_" + key
+const keyBRA = "bra_" + key
 const keyB = "b_" + key
 
 onMounted(() => {
@@ -113,15 +131,28 @@ onMounted(() => {
     if(ref_tl.value) {
         (ref_tl.value as HTMLElement).id = keyTL
     }
+
     if(ref_tr.value) {
         (ref_tr.value as HTMLElement).id = keyTR
     }
+    if(ref_tra.value) {
+        (ref_tra.value as HTMLElement).id = keyTRA
+    }
+
     if(ref_bl.value) {
         (ref_bl.value as HTMLElement).id = keyBL
     }
+    if(ref_bla.value) {
+        (ref_bla.value as HTMLElement).id = keyBLA
+    }
+
     if(ref_br.value) {
         (ref_br.value as HTMLElement).id = keyBR
     }
+    if(ref_bra.value) {
+        (ref_bra.value as HTMLElement).id = keyBRA
+    }
+
     if(ref_b.value) {
         (ref_b.value as HTMLElement).id = keyB
     }
@@ -136,44 +167,84 @@ onMounted(() => {
 const setupScrollSync = () => {
     const leftElement = document.querySelector('.elem-left') as HTMLElement
     const rightElement = document.querySelector('.elem-right') as HTMLElement
+    const topRightElement = document.querySelector('.elem-top-right') as HTMLElement
     
-    if (!leftElement || !rightElement) return
+    if (!leftElement || !rightElement || !topRightElement) return
     
-    let isScrolling = false
+    let isScrollingVertical = false
+    let isScrollingHorizontal = false
     
-    // 左側のスクロールイベント
+    // 縦スクロール同期（左右の要素）
     leftElement.addEventListener('scroll', (e) => {
-        if (isScrolling) return
-        isScrolling = true
+        if (isScrollingVertical) return
+        isScrollingVertical = true
         
         const scrollTop = leftElement.scrollTop
         rightElement.scrollTop = scrollTop
         
         setTimeout(() => {
-            isScrolling = false
+            isScrollingVertical = false
         }, 10)
     })
     
-    // 右側のスクロールイベント
     rightElement.addEventListener('scroll', (e) => {
-        if (isScrolling) return
-        isScrolling = true
+        if (isScrollingVertical) return
+        isScrollingVertical = true
         
         const scrollTop = rightElement.scrollTop
         leftElement.scrollTop = scrollTop
         
         setTimeout(() => {
-            isScrolling = false
+            isScrollingVertical = false
+        }, 10)
+    })
+    
+    // 横スクロール同期（右側の要素と上部の要素）
+    rightElement.addEventListener('scroll', (e) => {
+        if (isScrollingHorizontal) return
+        isScrollingHorizontal = true
+        
+        const scrollLeft = rightElement.scrollLeft
+        topRightElement.scrollLeft = scrollLeft
+        
+        setTimeout(() => {
+            isScrollingHorizontal = false
+        }, 10)
+    })
+    
+    topRightElement.addEventListener('scroll', (e) => {
+        if (isScrollingHorizontal) return
+        isScrollingHorizontal = true
+        
+        const scrollLeft = topRightElement.scrollLeft
+        rightElement.scrollLeft = scrollLeft
+        
+        setTimeout(() => {
+            isScrollingHorizontal = false
         }, 10)
     })
 }
 
 const test = () => {
 
-    const cnf = {
+    const cnf: TFConfig = {
+        header_h: 60,
+        allday_h: 80,
         hour_h: 60,
         hour_w: 80,
         day_w: 200,
+    }
+
+    let elmTL = document.getElementById(keyTL)
+    if(elmTL) {
+        elmTL.style.width = cnf.hour_w + "px"
+        elmTL.style.height = (cnf.header_h + cnf.allday_h) + "px"
+    }
+
+    let elmTR = document.getElementById(keyTR)
+    if(elmTR) {
+        elmTR.style.width = (cnf.day_w * 7) + "px"
+        elmTR.style.height = (cnf.header_h + cnf.allday_h) + "px"
     }
 
     let elm = document.getElementById(keyBL)
@@ -188,6 +259,7 @@ const test = () => {
         elm2.style.height = (cnf.hour_h * 24) + "px"
     }
     
+    drawTR(cnf, 7)
     drawBL(cnf)
     drawBR(cnf, 7)
 }
@@ -204,7 +276,7 @@ interface TimesLine {
 }
 
 const drawBL = (conf: TFConfig) => {
-    const elm = d3.select("#" + keyBL)
+    const elm = d3.select("#" + keyBLA)
 
     let tf: TimesLine[] = []
     for(let idx = 0; idx < 24; ++idx) {
@@ -256,8 +328,48 @@ const drawBL = (conf: TFConfig) => {
         .attr("fill", "gray")
 }
 
+const drawTR = (conf: TFConfig, days: number) => {
+    const elm = d3.select("#" + keyTRA)
+
+    let day_labels: string[] = []
+    for(let d = 0; d < days; ++d) {
+        day_labels.push("Day " + (d + 1))
+    }
+
+    console.log(day_labels)
+    elm.selectAll("svg").remove()
+
+    const all_W = conf.day_w * days
+    const all_H = conf.header_h + conf.allday_h
+    const fld = elm.append("svg").attr("width", all_W).attr("height", all_H)
+
+    fld.selectAll("rect")
+        .data(day_labels)
+        .enter()
+        .append("rect")
+        .attr("x", (d, i) => { return i * conf.day_w })
+        .attr("y", 0)
+        .attr("width", conf.day_w)
+        .attr("height", all_H)
+        .attr("fill", (d, i) => { return i % 2 == 0 ? "#f0f0f0" : "#e0e0e0" })
+        .attr("stroke", "lightgray")
+        .attr("stroke-width", 1)
+
+    fld.selectAll("text")
+        .data(day_labels)
+        .enter()
+        .append("text")
+        .attr("x", (d, i) => { return i * conf.day_w + conf.day_w / 2 })
+        .attr("y", conf.header_h / 2)
+        .attr("dominant-baseline", "middle")
+        .attr("text-anchor", "middle")
+        .text((d) => { return d })
+        .attr("font-size", 16)
+        .attr("fill", "black")
+}
+
 const drawBR = (conf: TFConfig, days: number) => {
-    const elm = d3.select("#" + keyBR)
+    const elm = d3.select("#" + keyBRA)
 
     let tf: TimesLine[] = []
     for(let idx = 0; idx < 24; ++idx) {
