@@ -62,9 +62,30 @@
     display: block; /* SVGをブロック要素として表示 */
 }
 .elem-right {
-    overflow: scroll;
+    overflow-x: auto;
+    overflow-y: scroll;
     flex: 1; /* 残りのスペースを占有 */
 }
+
+/* Webkit系ブラウザ用（Chrome, Safari, Edge等） */
+.elem-right::-webkit-scrollbar {
+    width: 0px;  /* 縦スクロールバーの幅を0に */
+    height: 8px; /* 横スクロールバーの高さ */
+}
+
+.elem-right::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.elem-right::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.elem-right::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
 .elem-right svg {
     display: block; /* SVGをブロック要素として表示 */
 }
