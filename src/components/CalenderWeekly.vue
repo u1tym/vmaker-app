@@ -262,22 +262,22 @@ const test = () => {
         elmTL.style.height = (cnf.header_h + cnf.allday_h) + "px"
     }
 
-    let elmTR = document.getElementById(keyTR)
+    let elmTR = document.getElementById(keyTRA)
     if(elmTR) {
         elmTR.style.width = (cnf.day_w * 7) + "px"
         elmTR.style.height = (cnf.header_h + cnf.allday_h) + "px"
     }
 
-    let elm = document.getElementById(keyBL)
-    if(elm) {
-        elm.style.width = cnf.hour_w + "px"
-        elm.style.height = (cnf.hour_h * 24) + "px"
+    let elmBL = document.getElementById(keyBLA)
+    if(elmBL) {
+        elmBL.style.width = cnf.hour_w + "px"
+        elmBL.style.height = (cnf.hour_h * 24 + 16) + "px"
     }
 
-    let elm2 = document.getElementById(keyBR)
-    if(elm2) {
-        elm2.style.width = (cnf.day_w * 7) + "px"
-        elm2.style.height = (cnf.hour_h * 24) + "px"
+    let elmBR = document.getElementById(keyBRA)
+    if(elmBR) {
+        elmBR.style.width = (cnf.day_w * 7) + "px"
+        elmBR.style.height = (cnf.hour_h * 24) + "px"
     }
     
     drawTR(cnf, 7)
