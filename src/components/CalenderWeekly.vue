@@ -127,7 +127,46 @@ onMounted(() => {
     }
 
     test()
+    
+    // スクロール同期の設定
+    setupScrollSync()
 })
+
+// スクロール同期機能
+const setupScrollSync = () => {
+    const leftElement = document.querySelector('.elem-left') as HTMLElement
+    const rightElement = document.querySelector('.elem-right') as HTMLElement
+    
+    if (!leftElement || !rightElement) return
+    
+    let isScrolling = false
+    
+    // 左側のスクロールイベント
+    leftElement.addEventListener('scroll', (e) => {
+        if (isScrolling) return
+        isScrolling = true
+        
+        const scrollTop = leftElement.scrollTop
+        rightElement.scrollTop = scrollTop
+        
+        setTimeout(() => {
+            isScrolling = false
+        }, 10)
+    })
+    
+    // 右側のスクロールイベント
+    rightElement.addEventListener('scroll', (e) => {
+        if (isScrolling) return
+        isScrolling = true
+        
+        const scrollTop = rightElement.scrollTop
+        leftElement.scrollTop = scrollTop
+        
+        setTimeout(() => {
+            isScrolling = false
+        }, 10)
+    })
+}
 
 const test = () => {
 
