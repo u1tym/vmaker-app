@@ -6,8 +6,12 @@
                 <div ref="ref_tr"></div>
             </div>
             <div class="elem-bottom" ref="ref_b">
-                <div ref="ref_bl"></div>
-                <div ref="ref_br"></div>
+                <div class="elem-left">
+                    <div ref="ref_bl"></div>
+                </div>
+                <div class="elem-right">
+                    <div ref="ref_br" ></div>
+                </div>
             </div>
         </div>
 
@@ -19,7 +23,7 @@
     display: flex;
     flex-direction: column;
     border: 1px solid #00f;
-    width: 400px;
+    width: 600px;
     height: 300px;
 }
 .elem-top {
@@ -27,16 +31,33 @@
     flex-direction: row;
     flex: 1;
     border-bottom: 1px solid #00f;
+    width: 100%;
+    height: 100px;
 }
+
 .elem-bottom {
     display: flex;
     flex-direction: row;
     flex: 1;
+    height: 200px;
+    overflow: hidden;
+    width: 100%;
+    height: 200px;
+}
+.elem-left {
     overflow-y: scroll;
     scrollbar-width: none;
-    height: 200px
 }
-
+.elem-left svg {
+    display: block; /* SVGをブロック要素として表示 */
+}
+.elem-right {
+    overflow: scroll;
+    flex: 1; /* 残りのスペースを占有 */
+}
+.elem-right svg {
+    display: block; /* SVGをブロック要素として表示 */
+}
 .p {
     width: 300px;
     height: 200px;
@@ -116,15 +137,18 @@ const test = () => {
         day_w: 200,
     }
 
-    d3.select("#b")
-        .attr("width", cnf.hour_w + cnf.day_w * 7)
-        .attr("height", cnf.hour_h * 24)
-    d3.select("#bl")
-        .attr("width", cnf.hour_w)
-        .attr("height", cnf.hour_h * 24)
-    d3.select("#br")
-        .attr("width", cnf.day_w * 7)
-        .attr("height", cnf.hour_h * 24)
+    let elm = document.getElementById(keyBL)
+    if(elm) {
+        elm.style.width = cnf.hour_w + "px"
+        elm.style.height = (cnf.hour_h * 24) + "px"
+    }
+
+    let elm2 = document.getElementById(keyBR)
+    if(elm2) {
+        elm2.style.width = (cnf.day_w * 7) + "px"
+        elm2.style.height = (cnf.hour_h * 24) + "px"
+    }
+    
     drawBL(cnf)
     drawBR(cnf, 7)
 }
@@ -216,6 +240,10 @@ const drawBR = (conf: TFConfig, days: number) => {
             bottomColor: "lightgray",
         })
     }
+    let day_vl: number[] = []
+    for(let d = 0; d < days; ++d) {
+        day_vl.push(d * conf.day_w)
+    }
 
     console.log(tf)
     elm.selectAll("svg").remove()
@@ -223,7 +251,7 @@ const drawBR = (conf: TFConfig, days: number) => {
     const all_H = conf.hour_h * 24
     const fld = elm.append("svg").attr("width", conf.day_w * days).attr("height", all_H)
 
-    fld.selectAll("line")
+    fld.selectAll("line.h")
         .data(tf)
         .enter()
         .append("line")
@@ -233,6 +261,16 @@ const drawBR = (conf: TFConfig, days: number) => {
         .attr("y2", (d) => { return d.bottom })
         .attr("stroke", (d) => { return d.bottomColor })
         .attr("stroke-width", (d) => { return d.bottomWidth })
+    fld.selectAll("line.v")
+        .data(day_vl)
+        .enter()
+        .append("line")
+        .attr("x1", (d) => { return d })
+        .attr("y1", 0)
+        .attr("x2", (d) => { return d })
+        .attr("y2", all_H)
+        .attr("stroke", "lightgray")
+        .attr("stroke-width", 1)
 }
 
 
