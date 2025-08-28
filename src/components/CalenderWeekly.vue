@@ -8,15 +8,14 @@
                 </div>
             </div>
             <div class="elem-bottom" ref="ref_b">
-                <div class="elem-left">
+                <div class="elem-bottom-left">
                     <div ref="ref_bla"></div>
                 </div>
-                <div class="elem-right">
+                <div class="elem-bottom-right">
                     <div ref="ref_bra" ></div>
                 </div>
             </div>
         </div>
-
     </div>
 </template>
 
@@ -54,39 +53,39 @@
     width: 100%;
     height: 200px;
 }
-.elem-left {
+.elem-bottom-left {
     overflow-y: scroll;
     scrollbar-width: none;
 }
-.elem-left svg {
+.elem-bottom-left svg {
     display: block; /* SVGをブロック要素として表示 */
 }
-.elem-right {
+.elem-bottom-right {
     overflow-x: auto;
     overflow-y: scroll;
     flex: 1; /* 残りのスペースを占有 */
 }
 
 /* Webkit系ブラウザ用（Chrome, Safari, Edge等） */
-.elem-right::-webkit-scrollbar {
+.elem-bottom-right::-webkit-scrollbar {
     width: 0px;  /* 縦スクロールバーの幅を0に */
     height: 8px; /* 横スクロールバーの高さ */
 }
 
-.elem-right::-webkit-scrollbar-track {
+.elem-bottom-right::-webkit-scrollbar-track {
     background: #f1f1f1;
 }
 
-.elem-right::-webkit-scrollbar-thumb {
+.elem-bottom-right::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 4px;
 }
 
-.elem-right::-webkit-scrollbar-thumb:hover {
+.elem-bottom-right::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
 
-.elem-right svg {
+.elem-bottom-right svg {
     display: block; /* SVGをブロック要素として表示 */
 }
 .p {
@@ -116,7 +115,7 @@ interface TFConfig {
     header_h: number // ヘッダーの高さ
     allday_h: number // 終日欄の高さ
     hour_h: number  // 1時間の高さ
-    
+
     hour_w: number  // 時間欄の幅
     day_w: number   // 日毎欄の幅
 }
@@ -126,6 +125,12 @@ const rstr = (l: number): string => {
     return Array.from(Array(l))
         .map(() => S[Math.floor(Math.random() * S.length)])
         .join("")
+}
+
+const getWeek = (date: Date): string => {
+
+const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+  return weekdays[date.getDay()];
 }
 
 const ref_tl = ref(null)
@@ -179,67 +184,67 @@ onMounted(() => {
     }
 
     test()
-    
+
     // スクロール同期の設定
     setupScrollSync()
 })
 
 // スクロール同期機能
 const setupScrollSync = () => {
-    const leftElement = document.querySelector('.elem-left') as HTMLElement
-    const rightElement = document.querySelector('.elem-right') as HTMLElement
+    const leftElement = document.querySelector('.elem-bottom-left') as HTMLElement
+    const rightElement = document.querySelector('.elem-bottom-right') as HTMLElement
     const topRightElement = document.querySelector('.elem-top-right') as HTMLElement
-    
+
     if (!leftElement || !rightElement || !topRightElement) return
-    
+
     let isScrollingVertical = false
     let isScrollingHorizontal = false
-    
+
     // 縦スクロール同期（左右の要素）
     leftElement.addEventListener('scroll', (e) => {
         if (isScrollingVertical) return
         isScrollingVertical = true
-        
+
         const scrollTop = leftElement.scrollTop
         rightElement.scrollTop = scrollTop
-        
+
         setTimeout(() => {
             isScrollingVertical = false
         }, 10)
     })
-    
+
     rightElement.addEventListener('scroll', (e) => {
         if (isScrollingVertical) return
         isScrollingVertical = true
-        
+
         const scrollTop = rightElement.scrollTop
         leftElement.scrollTop = scrollTop
-        
+
         setTimeout(() => {
             isScrollingVertical = false
         }, 10)
     })
-    
+
     // 横スクロール同期（右側の要素と上部の要素）
     rightElement.addEventListener('scroll', (e) => {
         if (isScrollingHorizontal) return
         isScrollingHorizontal = true
-        
+
         const scrollLeft = rightElement.scrollLeft
         topRightElement.scrollLeft = scrollLeft
-        
+
         setTimeout(() => {
             isScrollingHorizontal = false
         }, 10)
     })
-    
+
     topRightElement.addEventListener('scroll', (e) => {
         if (isScrollingHorizontal) return
         isScrollingHorizontal = true
-        
+
         const scrollLeft = topRightElement.scrollLeft
         rightElement.scrollLeft = scrollLeft
-        
+
         setTimeout(() => {
             isScrollingHorizontal = false
         }, 10)
@@ -260,8 +265,8 @@ const test = () => {
     if(elmTL) {
         elmTL.style.width = cnf.hour_w + "px"
         elmTL.style.height = (cnf.header_h + cnf.allday_h) + "px"
-    }
-
+    }7
+7
     let elmTR = document.getElementById(keyTRA)
     if(elmTR) {
         elmTR.style.width = (cnf.day_w * 7) + "px"
@@ -279,8 +284,15 @@ const test = () => {
         elmBR.style.width = (cnf.day_w * 7) + "px"
         elmBR.style.height = (cnf.hour_h * 24) + "px"
     }
-    
-    drawTR(cnf, 7)
+
+    const dl: Date[] = []
+    const today = new Date()
+    for(let idx = 0; idx < 7; ++idx) {
+        const n = new Date()
+        n.setDate(today.getDate() + idx)
+        dl.push(n)
+    }
+    drawTR(cnf, dl)
     drawBL(cnf)
     drawBR(cnf, 7)
 }
@@ -349,18 +361,28 @@ const drawBL = (conf: TFConfig) => {
         .attr("fill", "gray")
 }
 
-const drawTR = (conf: TFConfig, days: number) => {
+const drawTR = (conf: TFConfig, days: Date[]) => {
     const elm = d3.select("#" + keyTRA)
 
-    let day_labels: string[] = []
-    for(let d = 0; d < days; ++d) {
-        day_labels.push("Day " + (d + 1))
+    let day_labels: {x:number, y:number, text:string}[] = []
+    for(let idx = 0; idx < days.length; ++idx) {
+        console.log(String(days[idx].getDate()))
+        day_labels.push({
+            x: idx * conf.day_w + conf.day_w / 2,
+            y: 40,
+            text: String(days[idx].getDate())
+        })
+        day_labels.push({
+            x: idx * conf.day_w + conf.day_w / 2,
+            y: 20,
+            text: getWeek(days[idx])
+        })
     }
 
     console.log(day_labels)
     elm.selectAll("svg").remove()
 
-    const all_W = conf.day_w * days
+    const all_W = conf.day_w * days.length
     const all_H = conf.header_h + conf.allday_h
     const fld = elm.append("svg").attr("width", all_W).attr("height", all_H)
 
@@ -380,11 +402,11 @@ const drawTR = (conf: TFConfig, days: number) => {
         .data(day_labels)
         .enter()
         .append("text")
-        .attr("x", (d, i) => { return i * conf.day_w + conf.day_w / 2 })
-        .attr("y", conf.header_h / 2)
+        .attr("x", (d) => { return d.x })
+        .attr("y", (d) => { return d.y })
         .attr("dominant-baseline", "middle")
         .attr("text-anchor", "middle")
-        .text((d) => { return d })
+        .text((d) => { return d.text })
         .attr("font-size", 16)
         .attr("fill", "black")
 }
