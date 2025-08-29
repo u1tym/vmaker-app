@@ -111,6 +111,8 @@
 import { ref, onMounted } from 'vue'
 import * as d3 from 'd3'
 
+import { ScheduleRecord, ScheduleType } from 'ScheduleType'
+
 interface TFConfig {
     header_h: number // ヘッダーの高さ
     allday_h: number // 終日欄の高さ
@@ -265,8 +267,8 @@ const test = () => {
     if(elmTL) {
         elmTL.style.width = cnf.hour_w + "px"
         elmTL.style.height = (cnf.header_h + cnf.allday_h) + "px"
-    }7
-7
+    }
+
     let elmTR = document.getElementById(keyTRA)
     if(elmTR) {
         elmTR.style.width = (cnf.day_w * 7) + "px"
