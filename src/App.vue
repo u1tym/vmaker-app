@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import C1 from './components/CalenderWeekly.vue'
+import C1 from './Sample.vue'
 </script>
 
 <template>

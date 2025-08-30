@@ -108,20 +108,42 @@
 </style>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import * as d3 from 'd3'
 
-import { ScheduleRecord, ScheduleType } from 'ScheduleType'
+import type { ScheduleRecord } from './ScheduleTypes'
+import { ScheduleType } from './ScheduleTypes'
 
+// 表示エリアの設定
 interface TFConfig {
     header_h: number // ヘッダーの高さ
     allday_h: number // 終日欄の高さ
     hour_h: number  // 1時間の高さ
-
     hour_w: number  // 時間欄の幅
     day_w: number   // 日毎欄の幅
 }
 
+
+interface TFSchdAllDay {
+    date: Date
+    schdType: ScheduleType
+    title: string
+}
+interface TFSchdTime {
+    startTime: Date
+    endTime: Date
+    schdType: ScheduleType
+    title: string
+}
+interface TFDay {
+    date: Date
+    sche_allday: TFSchdAllDay[] 
+    schedules: TFSchdTime[]
+}
+
+// -----------------------------------------------------
+
+// ランダム文字列生成
 const rstr = (l: number): string => {
     const S = "ABCDEFGHJKLMNOPQRSTUVWXYZ0123456789"
     return Array.from(Array(l))
@@ -129,11 +151,58 @@ const rstr = (l: number): string => {
         .join("")
 }
 
+// 曜日取得
 const getWeek = (date: Date): string => {
-
-const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
-  return weekdays[date.getDay()];
+    const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+        return weekdays[date.getDay()];
 }
+
+const dateStart = (dt: Date): Date => {
+    let d = new Date(dt)
+    d.setHours(0, 0, 0, 0)
+    return d
+}
+
+const dateEnd = (dt: Date): Date => {
+    let d = new Date(dt)
+    d.setHours(23, 59, 59, 999)
+    return d
+}
+
+const acrossDay = (dtmSt: Date, dtmEd: Date, tgt: Date): boolean => {
+    const tgtSt = dateStart(tgt)
+    const tgtEd = dateEnd(tgt)
+    if(dtmEd < tgtSt) return false
+    if(tgtEd < dtmSt) return false
+    return true
+}
+
+// スケジュールのソート
+// 1. all_day_flag (true < false)
+// 2. start (早い順)
+// 3. end (早い順)
+// 4. type (meeting < task < reminder)
+// 5. title (辞書順)
+const sortSchedules = (a: ScheduleRecord, b: ScheduleRecord): number => {
+    if(a.all_day_flag && !b.all_day_flag) return -1
+    if(!a.all_day_flag && b.all_day_flag) return 1
+    if(a.start < b.start) return -1
+    if(a.start > b.start) return 1
+    if(a.end < b.end) return -1
+    if(a.end > b.end) return 1
+    if(a.schedule_type < b.schedule_type) return -1
+    if(a.schedule_type > b.schedule_type) return 1
+    if(a.title < b.title) return -1
+    if(a.title > b.title) return 1
+    return 0
+}
+
+interface Props {
+    start: Date
+    count: number
+    schedules: ScheduleRecord[]
+}
+const props = defineProps<Props>()
 
 const ref_tl = ref(null)
 const ref_tr = ref(null)
@@ -153,6 +222,10 @@ const keyBLA = "bla_" + key
 const keyBR = "br_" + key
 const keyBRA = "bra_" + key
 const keyB = "b_" + key
+
+let schedule_list: ScheduleRecord[] = []
+let schedule_start: Date | null = null
+let schedule_count: number | null = null
 
 onMounted(() => {
     console.log("onMounted")
@@ -185,6 +258,35 @@ onMounted(() => {
         (ref_b.value as HTMLElement).id = keyB
     }
 
+    watch(
+        () => props.schedules,
+        (newVal) => {
+            if(!newVal) return
+            schedule_list = newVal.slice()
+            schedule_list.sort(sortSchedules)
+
+            test()
+        }, { immediate: true }
+    )
+    watch(
+        () => props.start,
+        (newVal) => {
+            if(!newVal) return
+            schedule_start = newVal
+
+            test()
+        }, { immediate: true }
+    )
+    watch(
+        () => props.count,
+        (newVal) => {
+            if(!newVal) return
+            schedule_count = newVal
+
+            test()
+        }, { immediate: true }
+    )
+
     test()
 
     // スクロール同期の設定
@@ -203,7 +305,7 @@ const setupScrollSync = () => {
     let isScrollingHorizontal = false
 
     // 縦スクロール同期（左右の要素）
-    leftElement.addEventListener('scroll', (e) => {
+    leftElement.addEventListener('scroll', (_e) => {
         if (isScrollingVertical) return
         isScrollingVertical = true
 
@@ -215,7 +317,7 @@ const setupScrollSync = () => {
         }, 10)
     })
 
-    rightElement.addEventListener('scroll', (e) => {
+    rightElement.addEventListener('scroll', (_e) => {
         if (isScrollingVertical) return
         isScrollingVertical = true
 
@@ -228,7 +330,7 @@ const setupScrollSync = () => {
     })
 
     // 横スクロール同期（右側の要素と上部の要素）
-    rightElement.addEventListener('scroll', (e) => {
+    rightElement.addEventListener('scroll', (_e) => {
         if (isScrollingHorizontal) return
         isScrollingHorizontal = true
 
@@ -240,7 +342,7 @@ const setupScrollSync = () => {
         }, 10)
     })
 
-    topRightElement.addEventListener('scroll', (e) => {
+    topRightElement.addEventListener('scroll', (_e) => {
         if (isScrollingHorizontal) return
         isScrollingHorizontal = true
 
@@ -254,6 +356,9 @@ const setupScrollSync = () => {
 }
 
 const test = () => {
+    if(schedule_start == null) return
+    if(schedule_count == null) return
+    if(schedule_list.length == 0) return
 
     const cnf: TFConfig = {
         header_h: 60,
@@ -287,13 +392,77 @@ const test = () => {
         elmBR.style.height = (cnf.hour_h * 24) + "px"
     }
 
-    const dl: Date[] = []
-    const today = new Date()
-    for(let idx = 0; idx < 7; ++idx) {
-        const n = new Date()
-        n.setDate(today.getDate() + idx)
-        dl.push(n)
+    const dl: TFDay[] = []
+    for(let idx = 0; idx < schedule_count; ++idx) {
+        const n = new Date(schedule_start)
+        n.setDate(schedule_start.getDate() - 1 + idx)
+        dl.push({
+            date: n,
+            sche_allday: [],
+            schedules: []
+        })
     }
+
+    const addSchedule = (d: Date, s: ScheduleRecord, pos: number): number => {
+        let res = -1
+        for(let tgt of dl) {
+            if(tgt.date.getFullYear() != d.getFullYear()) continue
+            if(tgt.date.getMonth() != d.getMonth()) continue
+            if(tgt.date.getDate() != d.getDate()) continue
+
+            if(s.all_day_flag) {
+                if(pos > 0 && tgt.sche_allday.length <= pos) {
+                    const add_count = pos - tgt.sche_allday.length
+                    tgt.sche_allday.push( ...Array(add_count).fill(null))
+                }
+                tgt.sche_allday.push({
+                    date: d,
+                    schdType: s.schedule_type,
+                    title: s.title
+                })
+                res = tgt.sche_allday.length - 1
+            } else {
+                if(pos > 0 && tgt.schedules.length <= pos) {
+                    const add_count = pos - tgt.schedules.length
+                    tgt.schedules.push( ...Array(add_count).fill(null))
+                }
+                const st = new Date(s.start)
+                const ed = new Date(s.end)
+                tgt.schedules.push({
+                    startTime: st,
+                    endTime: ed,
+                    schdType: s.schedule_type,
+                    title: s.title
+                })
+                res = tgt.schedules.length - 1
+            }
+            break
+        }
+        return res
+    }
+
+    for(let s of schedule_list) {
+        let s_st = new Date(s.start)
+        let s_ed = new Date(s.end)
+        if(s.all_day_flag) {
+            s_st = dateStart(s_st)
+            s_ed = dateEnd(s_ed)
+        }
+
+        let pos = 0
+        for(let d of dl) {
+            if(acrossDay(s_st, s_ed, d.date)) {
+                let res = addSchedule(d.date, s, pos)
+                if(res >= 0) {
+                    pos = res
+                }
+            }
+        }
+    }
+
+    console.log("★")
+    console.log(dl)
+
     drawTR(cnf, dl)
     drawBL(cnf)
     drawBR(cnf, 7)
@@ -363,21 +532,21 @@ const drawBL = (conf: TFConfig) => {
         .attr("fill", "gray")
 }
 
-const drawTR = (conf: TFConfig, days: Date[]) => {
+const drawTR = (conf: TFConfig, days: TFDay[]) => {
     const elm = d3.select("#" + keyTRA)
 
     let day_labels: {x:number, y:number, text:string}[] = []
     for(let idx = 0; idx < days.length; ++idx) {
-        console.log(String(days[idx].getDate()))
+        console.log(String(days[idx].date.getDate()))
         day_labels.push({
             x: idx * conf.day_w + conf.day_w / 2,
             y: 40,
-            text: String(days[idx].getDate())
+            text: String(days[idx].date.getDate())
         })
         day_labels.push({
             x: idx * conf.day_w + conf.day_w / 2,
             y: 20,
-            text: getWeek(days[idx])
+            text: getWeek(days[idx].date)
         })
     }
 
@@ -392,11 +561,11 @@ const drawTR = (conf: TFConfig, days: Date[]) => {
         .data(day_labels)
         .enter()
         .append("rect")
-        .attr("x", (d, i) => { return i * conf.day_w })
+        .attr("x", (_d, i) => { return i * conf.day_w })
         .attr("y", 0)
         .attr("width", conf.day_w)
         .attr("height", all_H)
-        .attr("fill", (d, i) => { return i % 2 == 0 ? "#f0f0f0" : "#e0e0e0" })
+        .attr("fill", (_d, i) => { return i % 2 == 0 ? "#f0f0f0" : "#e0e0e0" })
         .attr("stroke", "lightgray")
         .attr("stroke-width", 1)
 
