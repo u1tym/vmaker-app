@@ -1,19 +1,17 @@
 <template>
-    <div>
-        <div class="elem-all">
-            <div class="elem-top">
-                <div ref="ref_tl"></div>
-                <div class="elem-top-right">
-                    <div ref="ref_tra"></div>
-                </div>
+    <div class="elem-all">
+        <div class="elem-top">
+            <div ref="ref_tl"></div>
+            <div class="elem-top-right">
+                <div ref="ref_tra"></div>
             </div>
-            <div class="elem-bottom" ref="ref_b">
-                <div class="elem-bottom-left">
-                    <div ref="ref_bla"></div>
-                </div>
-                <div class="elem-bottom-right">
-                    <div ref="ref_bra" ></div>
-                </div>
+        </div>
+        <div class="elem-bottom" ref="ref_b">
+            <div class="elem-bottom-left">
+                <div ref="ref_bla"></div>
+            </div>
+            <div class="elem-bottom-right">
+                <div ref="ref_bra" ></div>
             </div>
         </div>
     </div>
@@ -24,8 +22,8 @@
     display: flex;
     flex-direction: column;
     border: 1px solid #00f;
-    width: 600px;
-    height: 300px;
+    width: 100%;
+    height: 100%;
 }
 .elem-top {
     display: flex;
@@ -33,7 +31,9 @@
     flex: 1;
     border-bottom: 1px solid #00f;
     width: 100%;
-    height: 100px;
+    height: 140px; /* header_h + allday_h の値に合わせる */
+    min-height: 140px; /* 最小高さも設定 */
+    max-height: 140px; /* 最大高さも設定 */
 }
 
 .elem-top > div:first-child {
@@ -88,23 +88,6 @@
 .elem-bottom-right svg {
     display: block; /* SVGをブロック要素として表示 */
 }
-.p {
-    width: 300px;
-    height: 200px;
-    overflow: hidden;
-    border: 1px solid #000;
-}
-#a {
-    width: 100%;
-    height: 100%;
-    border: 1px solid #f00;
-}
-.b {
-    margin-top: 20px;
-    width: 300px;
-    height: 200px;
-    border: 1px solid #f00;
-}
 </style>
 
 <script setup lang="ts">
@@ -127,13 +110,17 @@ interface TFConfig {
 interface TFSchdAllDay {
     date: Date
     schdType: ScheduleType
+    todo_done: boolean | null
     title: string
+    color: string
 }
 interface TFSchdTime {
     startTime: Date
     endTime: Date
     schdType: ScheduleType
+    todo_done: boolean | null
     title: string
+    color: string
 }
 interface TFDay {
     date: Date
@@ -198,8 +185,8 @@ const sortSchedules = (a: ScheduleRecord, b: ScheduleRecord): number => {
 }
 
 interface Props {
-    start: Date
-    count: number
+    start: Date             // 表示開始日
+    count: number           // 表示日数
     schedules: ScheduleRecord[]
 }
 const props = defineProps<Props>()
@@ -265,7 +252,7 @@ onMounted(() => {
             schedule_list = newVal.slice()
             schedule_list.sort(sortSchedules)
 
-            test()
+            draw()
         }, { immediate: true }
     )
     watch(
@@ -274,7 +261,7 @@ onMounted(() => {
             if(!newVal) return
             schedule_start = newVal
 
-            test()
+            draw()
         }, { immediate: true }
     )
     watch(
@@ -283,11 +270,11 @@ onMounted(() => {
             if(!newVal) return
             schedule_count = newVal
 
-            test()
+            draw()
         }, { immediate: true }
     )
 
-    test()
+    draw()
 
     // スクロール同期の設定
     setupScrollSync()
@@ -355,7 +342,8 @@ const setupScrollSync = () => {
     })
 }
 
-const test = () => {
+const draw = () => {
+    // データがそろっていない場合は処理しない-
     if(schedule_start == null) return
     if(schedule_count == null) return
     if(schedule_list.length == 0) return
@@ -374,10 +362,16 @@ const test = () => {
         elmTL.style.height = (cnf.header_h + cnf.allday_h) + "px"
     }
 
-    let elmTR = document.getElementById(keyTRA)
+    let elmTR = document.getElementById(keyTR)
     if(elmTR) {
         elmTR.style.width = (cnf.day_w * 7) + "px"
         elmTR.style.height = (cnf.header_h + cnf.allday_h) + "px"
+    }
+
+    let elmTRA = document.getElementById(keyTRA)
+    if(elmTRA) {
+        elmTRA.style.width = (cnf.day_w * 7) + "px"
+        elmTRA.style.height = (cnf.header_h + cnf.allday_h) + "px"
     }
 
     let elmBL = document.getElementById(keyBLA)
@@ -388,7 +382,7 @@ const test = () => {
 
     let elmBR = document.getElementById(keyBRA)
     if(elmBR) {
-        elmBR.style.width = (cnf.day_w * 7) + "px"
+        elmBR.style.width = (cnf.day_w * schedule_count) + "px"
         elmBR.style.height = (cnf.hour_h * 24) + "px"
     }
 
@@ -418,7 +412,9 @@ const test = () => {
                 tgt.sche_allday.push({
                     date: d,
                     schdType: s.schedule_type,
-                    title: s.title
+                    todo_done: s.todo_done,
+                    title: s.title,
+                    color: s.color,
                 })
                 res = tgt.sche_allday.length - 1
             } else {
@@ -432,7 +428,9 @@ const test = () => {
                     startTime: st,
                     endTime: ed,
                     schdType: s.schedule_type,
-                    title: s.title
+                    todo_done: s.todo_done,
+                    title: s.title,
+                    color: s.color,
                 })
                 res = tgt.schedules.length - 1
             }
@@ -463,9 +461,10 @@ const test = () => {
     console.log("★")
     console.log(dl)
 
+    drawTL(cnf)
     drawTR(cnf, dl)
     drawBL(cnf)
-    drawBR(cnf, 7)
+    drawBR(cnf, schedule_count, dl)
 }
 
 
@@ -477,6 +476,15 @@ interface TimesLine {
     bottom: number
     bottomWidth: number
     bottomColor: string
+}
+
+interface TimeBox {
+    x: number
+    y: number
+    w: number
+    h: number
+    color: string
+    text: string
 }
 
 const drawBL = (conf: TFConfig) => {
@@ -532,6 +540,62 @@ const drawBL = (conf: TFConfig) => {
         .attr("fill", "gray")
 }
 
+const drawTL = (conf: TFConfig) => {
+    const elm = d3.select("#" + keyTL)
+
+    elm.selectAll("svg").remove()
+
+    const all_W = conf.hour_w
+    const all_H = conf.header_h + conf.allday_h
+    const fld = elm.append("svg").attr("width", all_W).attr("height", all_H)
+
+    fld.append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", all_W)
+        .attr("height", conf.header_h)
+        .attr("fill", "#f0f0f0")
+        .attr("stroke", "lightgray")
+        .attr("stroke-width", 1)
+    fld.append("rect")
+        .attr("x", 0)
+        .attr("y", conf.header_h)
+        .attr("width", all_W)
+        .attr("height", conf.allday_h)
+        .attr("fill", "#f0f0f0")
+        .attr("stroke", "lightgray")
+        .attr("stroke-width", 1)
+    fld.append("text")
+        .attr("x", all_W / 2)
+        .attr("y", conf.header_h + conf.allday_h / 2)
+        .attr("dominant-baseline", "middle")
+        .attr("text-anchor", "middle")
+        .text("終日")
+        .attr("font-size", 16)
+        .attr("fill", "black")
+}
+
+const pos_x = (conf: TFConfig, dl: TFDay[], dt: Date): number => {
+    for(let idx = 0; idx < dl.length; ++idx) {
+        if(dl[idx].date.getFullYear() != dt.getFullYear()) continue
+        if(dl[idx].date.getMonth() != dt.getMonth()) continue
+        if(dl[idx].date.getDate() != dt.getDate()) continue
+        return idx * conf.day_w
+    }
+    return -1
+}
+
+const pos_y = (conf: TFConfig, dt: Date): number => {
+    const h = dt.getHours()
+    const m = dt.getMinutes()
+    const y = h * conf.hour_h + (m / 60) * conf.hour_h
+    return y
+}
+
+const pos_T_y = (conf: TFConfig, index: number): number => {
+    return conf.header_h + 20 * index
+}
+
 const drawTR = (conf: TFConfig, days: TFDay[]) => {
     const elm = d3.select("#" + keyTRA)
 
@@ -550,6 +614,30 @@ const drawTR = (conf: TFConfig, days: TFDay[]) => {
         })
     }
 
+    let sch_boxes: TimeBox[] = []
+    for(let d of days) {
+        // 終日スケジュール
+        for(let idx = 0; idx < d.sche_allday.length; ++idx) {
+            const s = d.sche_allday[idx]
+            if(!s) continue
+
+            const x = pos_x(conf, days, s.date)
+            const y = pos_T_y(conf, idx)
+            const w = conf.day_w - 10
+            const h = 16
+            let color = s.color
+
+            let text = s.title
+            sch_boxes.push({
+                x: x + 5,
+                y: y,
+                w: w,
+                h: h,
+                color: color,
+                text: text
+            })
+        }
+    }
     console.log(day_labels)
     elm.selectAll("svg").remove()
 
@@ -557,17 +645,29 @@ const drawTR = (conf: TFConfig, days: TFDay[]) => {
     const all_H = conf.header_h + conf.allday_h
     const fld = elm.append("svg").attr("width", all_W).attr("height", all_H)
 
-    fld.selectAll("rect")
+    fld.selectAll("rect.day")
         .data(day_labels)
         .enter()
         .append("rect")
         .attr("x", (_d, i) => { return i * conf.day_w })
         .attr("y", 0)
         .attr("width", conf.day_w)
-        .attr("height", all_H)
+        .attr("height", conf.header_h)
         .attr("fill", (_d, i) => { return i % 2 == 0 ? "#f0f0f0" : "#e0e0e0" })
         .attr("stroke", "lightgray")
         .attr("stroke-width", 1)
+    fld.selectAll("rect.all")
+        .data(day_labels)
+        .enter()
+        .append("rect")
+        .attr("x", (_d, i) => { return i * conf.day_w })
+        .attr("y", conf.header_h)
+        .attr("width", conf.day_w)
+        .attr("height", conf.allday_h)
+        .attr("fill", (_d, i) => { return i % 2 == 0 ? "#f0f0f0" : "#e0e0e0" })
+        .attr("stroke", "lightgray")
+        .attr("stroke-width", 1)
+    
 
     fld.selectAll("text")
         .data(day_labels)
@@ -580,9 +680,58 @@ const drawTR = (conf: TFConfig, days: TFDay[]) => {
         .text((d) => { return d.text })
         .attr("font-size", 16)
         .attr("fill", "black")
+    
+    fld.selectAll("rect.s")
+        .data(sch_boxes)
+        .enter()
+        .append("rect")
+        .attr("x", (d) => { return d.x })
+        .attr("y", (d) => { return d.y })
+        .attr("rx", 4)
+        .attr("ry", 4)
+        .attr("width", (d) => { return d.w })
+        .attr("height", (d) => { return d.h })
+        .attr("fill", (d) => { return d.color })
+        .attr("stroke", (d) => { return d.color })
+        .attr("stroke-width", 1)
+    
+    const svg = d3.select("svg")
+    const tempText = svg.append("text").attr("font-size", 12).attr("visibility", "hidden");
+    if(!tempText) return;
+
+    fld.selectAll("text.s")
+        .data(sch_boxes)
+        .enter()
+        .append("text")
+        .attr("x", (d) => { return d.x + 5 })
+        .attr("y", (d) => { return d.y + d.h / 2 })
+        .attr("dominant-baseline", "middle")
+        .attr("text-anchor", "start")
+        .text((d) => {
+            let text = d.text
+            tempText.text(text)
+            while (true) {
+                let elm = tempText.node()
+                if(elm == null) break
+
+                if(!(elm.getComputedTextLength() > (d.w - 10) && text.length > 0)) break
+                text = text.slice(0, -1)
+                tempText.text(text + "...")
+            }
+            return text.length < d.text.length ? text + "..." : text
+        })
+        .attr("font-size", 12)
+        .attr("fill", "white")
+        .attr("pointer-events", "none")
 }
 
-const drawBR = (conf: TFConfig, days: number) => {
+
+
+const time_string = (dt: Date): string => {
+    return ('00' + dt.getHours()).slice(-2) + ":" + ('00' + dt.getMinutes()).slice(-2)
+}
+
+const drawBR = (conf: TFConfig, days: number, dl: TFDay[]) => {
     const elm = d3.select("#" + keyBRA)
 
     let tf: TimesLine[] = []
@@ -610,6 +759,31 @@ const drawBR = (conf: TFConfig, days: number) => {
         day_vl.push(d * conf.day_w)
     }
 
+    let sch_boxes: TimeBox[] = []
+    for(let d of dl) {
+
+        // 時間指定スケジュール
+        for(let idx = 0; idx < d.schedules.length; ++idx) {
+            const s = d.schedules[idx]
+            if(!s) continue
+
+            const x = pos_x(conf, dl, s.startTime)
+            const y = pos_y(conf, s.startTime)
+            const w = conf.day_w - 10
+            const h = pos_y(conf, s.endTime) - pos_y(conf, s.startTime)
+            let color = s.color
+
+            let text = time_string(s.startTime) + " " + s.title
+            sch_boxes.push({
+                x: x + 5,
+                y: y,
+                w: w,
+                h: h,
+                color: color,
+                text: text
+            })
+        }
+    }
     console.log(tf)
     elm.selectAll("svg").remove()
 
@@ -636,8 +810,50 @@ const drawBR = (conf: TFConfig, days: number) => {
         .attr("y2", all_H)
         .attr("stroke", "lightgray")
         .attr("stroke-width", 1)
-}
+    fld.selectAll("rect.s")
+        .data(sch_boxes)
+        .enter()
+        .append("rect")
+        .attr("x", (d) => { return d.x })
+        .attr("y", (d) => { return d.y })
+        .attr("rx", 4)
+        .attr("ry", 4)
+        .attr("width", (d) => { return d.w })
+        .attr("height", (d) => { return d.h })
+        .attr("fill", (d) => { return d.color })
+        .attr("stroke", (d) => { return d.color })
+        .attr("stroke-width", 1)
+    
+    const svg = d3.select("svg")
+    const tempText = svg.append("text").attr("font-size", 12).attr("visibility", "hidden");
+    if(!tempText) return;
 
+    fld.selectAll("text.s")
+        .data(sch_boxes)
+        .enter()
+        .append("text")
+        .attr("x", (d) => { return d.x + 5 })
+        .attr("y", (d) => { return d.y + 5 })
+        .attr("dominant-baseline", "hanging")
+        .attr("text-anchor", "start")
+        .text((d) => { 
+            let text = d.text
+            tempText.text(text)
+            while (true) {
+                let elm = tempText.node()
+                if(elm == null) break
+
+                if(!(elm.getComputedTextLength() > (d.w - 10) && text.length > 0)) break
+                text = text.slice(0, -1)
+                tempText.text(text + "...")
+            }
+            return text.length < d.text.length ? text + "..." : text
+         })
+        .attr("font-size", 12)
+        .attr("fill", "white")
+        .attr("pointer-events", "none")
+
+}
 
 
 </script>
